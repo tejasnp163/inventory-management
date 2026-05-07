@@ -90,6 +90,18 @@ export function useI18n() {
     return customerName
   }
 
+  // Translate product categories
+  const translateCategory = (category) => {
+    const map = {
+      'Circuit Boards': t('categories.circuitBoards'),
+      'Sensors': t('categories.sensors'),
+      'Actuators': t('categories.actuators'),
+      'Controllers': t('categories.controllers'),
+      'Power Supplies': t('categories.powerSupplies')
+    }
+    return map[category] || category
+  }
+
   // Translate warehouse names
   const translateWarehouse = (warehouseName) => {
     if (currentLocale.value === 'ja') {
@@ -123,6 +135,7 @@ export function useI18n() {
     localeName,
     translateProductName,
     translateCustomerName,
+    translateCategory,
     translateWarehouse
   }
 }

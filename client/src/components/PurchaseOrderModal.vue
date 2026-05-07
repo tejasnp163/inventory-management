@@ -1,104 +1,93 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="isOpen && backlogItem" class="modal-overlay" @click="close">
-        <div class="modal-container" @click.stop>
-          <div class="modal-header">
-            <h3 class="modal-title">{{ mode === 'create' ? 'Create Purchase Order' : 'Purchase Order Details' }}</h3>
-            <button class="close-button" @click="close">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
+  <BaseModal
+    :is-open="isOpen && !!backlogItem"
+    :title="mode === 'create' ? 'Create Purchase Order' : 'Purchase Order Details'"
+    @close="close"
+  >
+    <div class="item-header">
+      <div class="item-info">
+        <h4 class="item-name">{{ backlogItem.item_name }}</h4>
+        <div class="item-sku">SKU: {{ backlogItem.item_sku }}</div>
+      </div>
+    </div>
 
-          <div class="modal-body">
-            <div class="item-header">
-              <div class="item-info">
-                <h4 class="item-name">{{ backlogItem.item_name }}</h4>
-                <div class="item-sku">SKU: {{ backlogItem.item_sku }}</div>
-              </div>
-            </div>
+    <!-- Create mode: form -->
+    <form v-if="mode === 'create'" class="po-form" @submit.prevent="submitPO">
+      <div class="form-group">
+        <label class="form-label" for="po-supplier">Supplier Name</label>
+        <input
+          id="po-supplier"
+          v-model="supplierName"
+          type="text"
+          class="form-input"
+          placeholder="Enter supplier name"
+          required
+        />
+      </div>
 
-            <!-- Create mode: form -->
-            <form v-if="mode === 'create'" class="po-form" @submit.prevent="submitPO">
-              <div class="form-group">
-                <label class="form-label" for="po-supplier">Supplier Name</label>
-                <input
-                  id="po-supplier"
-                  v-model="supplierName"
-                  type="text"
-                  class="form-input"
-                  placeholder="Enter supplier name"
-                  required
-                />
-              </div>
+      <div class="form-group">
+        <label class="form-label" for="po-quantity">Quantity</label>
+        <div class="form-static">{{ backlogItem.quantity_needed - backlogItem.quantity_available }} units</div>
+      </div>
 
-              <div class="form-group">
-                <label class="form-label" for="po-quantity">Quantity</label>
-                <div class="form-static">{{ backlogItem.quantity_needed - backlogItem.quantity_available }} units</div>
-              </div>
+      <div class="form-group">
+        <label class="form-label" for="po-date">Expected Delivery Date</label>
+        <input
+          id="po-date"
+          v-model="expectedDate"
+          type="date"
+          class="form-input"
+          required
+        />
+      </div>
 
-              <div class="form-group">
-                <label class="form-label" for="po-date">Expected Delivery Date</label>
-                <input
-                  id="po-date"
-                  v-model="expectedDate"
-                  type="date"
-                  class="form-input"
-                  required
-                />
-              </div>
+      <div class="form-footer">
+        <button type="button" class="btn-secondary" @click="close">Cancel</button>
+        <button type="submit" class="btn-primary">Create PO</button>
+      </div>
+    </form>
 
-              <div class="modal-footer">
-                <button type="button" class="btn-secondary" @click="close">Cancel</button>
-                <button type="submit" class="btn-primary">Create PO</button>
-              </div>
-            </form>
-
-            <!-- View mode: read-only details -->
-            <div v-else class="po-details">
-              <div v-if="backlogItem.purchase_order" class="info-grid">
-                <div class="info-item">
-                  <div class="info-label">PO ID</div>
-                  <div class="info-value po-id">{{ backlogItem.purchase_order.id }}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Supplier</div>
-                  <div class="info-value">{{ backlogItem.purchase_order.supplier }}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Quantity</div>
-                  <div class="info-value">{{ backlogItem.purchase_order.quantity }} units</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Expected Date</div>
-                  <div class="info-value">{{ formatDate(backlogItem.purchase_order.expected_date) }}</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-label">Status</div>
-                  <div class="info-value">
-                    <span class="badge" :class="statusBadgeClass(backlogItem.purchase_order.status)">
-                      {{ backlogItem.purchase_order.status }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="no-po">No purchase order found</div>
-
-              <div class="modal-footer">
-                <button class="btn-secondary" @click="close">Close</button>
-              </div>
-            </div>
+    <!-- View mode: read-only details -->
+    <div v-else class="po-details">
+      <div v-if="backlogItem.purchase_order" class="info-grid">
+        <div class="info-item">
+          <div class="info-label">PO ID</div>
+          <div class="info-value po-id">{{ backlogItem.purchase_order.id }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Supplier</div>
+          <div class="info-value">{{ backlogItem.purchase_order.supplier }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Quantity</div>
+          <div class="info-value">{{ backlogItem.purchase_order.quantity }} units</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Expected Date</div>
+          <div class="info-value">{{ formatDate(backlogItem.purchase_order.expected_date) }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Status</div>
+          <div class="info-value">
+            <span class="badge" :class="statusBadgeClass(backlogItem.purchase_order.status)">
+              {{ backlogItem.purchase_order.status }}
+            </span>
           </div>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+      <div v-else class="no-po">No purchase order found</div>
+    </div>
+
+    <template v-if="mode === 'view'" #footer>
+      <button class="btn-secondary" @click="close">Close</button>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { formatDate } from '../utils/date'
+import BaseModal from './BaseModal.vue'
 
 const props = defineProps({
   isOpen: {
@@ -139,17 +128,6 @@ const submitPO = () => {
   close()
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return dateString
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
 const statusBadgeClass = (status) => {
   if (!status) return ''
   switch (status.toLowerCase()) {
@@ -163,71 +141,6 @@ const statusBadgeClass = (status) => {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 1rem;
-}
-
-.modal-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-  max-width: 560px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-}
-
-.close-button:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem;
-}
-
 .item-header {
   padding-bottom: 1.25rem;
   border-bottom: 1px solid #e2e8f0;
@@ -290,6 +203,16 @@ const statusBadgeClass = (status) => {
   padding: 0.625rem 0;
 }
 
+/* Footer inside create-mode form (not the BaseModal footer slot) */
+.form-footer {
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -332,15 +255,6 @@ const statusBadgeClass = (status) => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-.modal-footer {
-  padding-top: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
 }
 
 .btn-secondary {
@@ -407,26 +321,5 @@ const statusBadgeClass = (status) => {
 .badge.info {
   background: #dbeafe;
   color: #1e40af;
-}
-
-/* Modal transition animations */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-active .modal-container,
-.modal-leave-active .modal-container {
-  transition: transform 0.2s ease;
-}
-
-.modal-enter-from .modal-container,
-.modal-leave-to .modal-container {
-  transform: scale(0.95);
 }
 </style>

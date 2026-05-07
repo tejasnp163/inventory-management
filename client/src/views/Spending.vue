@@ -168,6 +168,23 @@
       :cost-data="selectedCostData"
       @close="showCostModal = false"
     />
+
+    <BaseModal
+      :is-open="showTransactionModal"
+      title="Transaction Details"
+      @close="showTransactionModal = false"
+    >
+      <div v-if="selectedTransactionData" class="info-grid">
+        <div class="info-item"><div class="info-label">ID</div><div class="info-value">{{ String(selectedTransactionData.id).padStart(3, '0') }}</div></div>
+        <div class="info-item"><div class="info-label">Description</div><div class="info-value">{{ selectedTransactionData.description }}</div></div>
+        <div class="info-item"><div class="info-label">Vendor</div><div class="info-value">{{ selectedTransactionData.vendor }}</div></div>
+        <div class="info-item"><div class="info-label">Date</div><div class="info-value">{{ formatDateShort(selectedTransactionData.date) }}</div></div>
+        <div class="info-item"><div class="info-label">Amount</div><div class="info-value">{{ currencySymbol }}{{ selectedTransactionData.amount.toLocaleString() }}</div></div>
+      </div>
+      <template #footer>
+        <button class="btn-close" @click="showTransactionModal = false">Close</button>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -178,11 +195,13 @@ import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
 import CostDetailModal from '../components/CostDetailModal.vue'
+import BaseModal from '../components/BaseModal.vue'
 
 export default {
   name: 'Spending',
   components: {
-    CostDetailModal
+    CostDetailModal,
+    BaseModal
   },
   setup() {
     const { t, currentCurrency } = useI18n()
@@ -197,6 +216,8 @@ export default {
     // Modal state
     const showCostModal = ref(false)
     const selectedCostData = ref(null)
+    const selectedTransactionData = ref(null)
+    const showTransactionModal = ref(false)
 
     // Use shared filters
     const { selectedPeriod, getCurrentFilters } = useFilters()
@@ -370,11 +391,6 @@ export default {
       }
     }
 
-    // Watch for period filter changes
-    watch([selectedPeriod], () => {
-      // Data will automatically update via computed properties
-    })
-
     const formatCurrency = (value) => {
       return formatCurrencyUtil(value, currentCurrency.value)
     }
@@ -383,10 +399,14 @@ export default {
       return currentCurrency.value === 'JPY' ? '¥' : '$'
     })
 
-    const getBarHeight = (value) => {
-      const maxValue = 25000
-      return (value / maxValue) * 100
-    }
+    const maxSpendingValue = computed(() => {
+      if (allMonthlySpending.value.length === 0) return 25000
+      return Math.max(...allMonthlySpending.value.map(m =>
+        m.procurement + m.operational + m.labor + m.overhead
+      ))
+    })
+
+    const getBarHeight = (value) => (value / maxSpendingValue.value) * 100
 
     const getRevenueBarHeight = (value) => {
       const maxValue = maxRevenueValue.value * 1000
@@ -448,8 +468,8 @@ export default {
     }
 
     const handleTransactionClick = (transaction) => {
-      console.log('Transaction clicked:', transaction)
-      alert(`Transaction Details:\n\nID: ${transaction.id}\nDescription: ${transaction.description}\nVendor: ${transaction.vendor}\nDate: ${formatDateShort(transaction.date)}\nAmount: $${transaction.amount.toLocaleString()}`)
+      selectedTransactionData.value = transaction
+      showTransactionModal.value = true
     }
 
     const showCostDetail = (monthData) => {
@@ -485,6 +505,8 @@ export default {
       showCostModal,
       selectedCostData,
       showCostDetail,
+      selectedTransactionData,
+      showTransactionModal,
       Math
     }
   }
@@ -848,5 +870,49 @@ export default {
 
 .text-right {
   text-align: right;
+}
+
+/* Transaction detail modal styles */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.info-value {
+  font-size: 0.938rem;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.btn-close {
+  padding: 0.625rem 1.25rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-close:hover {
+  background: #e2e8f0;
 }
 </style>

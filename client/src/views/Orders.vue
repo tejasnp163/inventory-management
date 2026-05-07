@@ -46,19 +46,19 @@
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Delivered').length }}</div>
+          <div class="stat-value">{{ statusCounts['Delivered'] || 0 }}</div>
         </div>
         <div class="stat-card info">
           <div class="stat-label">{{ t('status.shipped') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Shipped').length }}</div>
+          <div class="stat-value">{{ statusCounts['Shipped'] || 0 }}</div>
         </div>
         <div class="stat-card warning">
           <div class="stat-label">{{ t('status.processing') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Processing').length }}</div>
+          <div class="stat-value">{{ statusCounts['Processing'] || 0 }}</div>
         </div>
         <div class="stat-card danger">
           <div class="stat-label">{{ t('status.backordered') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Backordered').length }}</div>
+          <div class="stat-value">{{ statusCounts['Backordered'] || 0 }}</div>
         </div>
       </div>
 
@@ -118,11 +118,12 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { formatDate as formatDateUtil } from '../utils/date'
 
 export default {
   name: 'Orders',
   setup() {
-    const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
+    const { t, currentCurrency, translateProductName, translateCustomerName, currentLocale } = useI18n()
 
     const currencySymbol = computed(() => {
       return currentCurrency.value === 'JPY' ? '¥' : '$'
@@ -165,9 +166,12 @@ export default {
       loadOrders()
     })
 
-    const getOrdersByStatus = (status) => {
-      return orders.value.filter(order => order.status === status)
-    }
+    const statusCounts = computed(() =>
+      orders.value.reduce((acc, o) => {
+        acc[o.status] = (acc[o.status] || 0) + 1
+        return acc
+      }, {})
+    )
 
     const getOrderStatusClass = (status) => {
       const statusMap = {
@@ -179,15 +183,7 @@ export default {
       return statusMap[status] || 'info'
     }
 
-    const formatDate = (dateString) => {
-      const { currentLocale } = useI18n()
-      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-      return new Date(dateString).toLocaleDateString(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    }
+    const formatDate = (dateString) => formatDateUtil(dateString, currentLocale.value)
 
     const loadRestockingOrders = async () => {
       try {
@@ -205,7 +201,7 @@ export default {
       error,
       orders,
       restockingOrders,
-      getOrdersByStatus,
+      statusCounts,
       getOrderStatusClass,
       formatDate,
       currencySymbol,
