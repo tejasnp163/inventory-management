@@ -87,19 +87,19 @@
                 <svg viewBox="0 0 200 200" class="donut-svg-compact">
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#e2e8f0" stroke-width="25"/>
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#10b981" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.delivered)} 408`"
+                    :stroke-dasharray="`${circleSegments.delivered} 408`"
                     stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#3b82f6" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.shipped)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered)}`"
+                    :stroke-dasharray="`${circleSegments.shipped} 408`"
+                    :stroke-dashoffset="`-${circleSegments.delivered}`"
                     transform="rotate(-90 100 100)"/>
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#f59e0b" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.processing)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered) + getCircleSegment(statusData.shipped)}`"
+                    :stroke-dasharray="`${circleSegments.processing} 408`"
+                    :stroke-dashoffset="`-${circleSegments.delivered + circleSegments.shipped}`"
                     transform="rotate(-90 100 100)"/>
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#ef4444" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.backordered)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered) + getCircleSegment(statusData.shipped) + getCircleSegment(statusData.processing)}`"
+                    :stroke-dasharray="`${circleSegments.backordered} 408`"
+                    :stroke-dashoffset="`-${circleSegments.delivered + circleSegments.shipped + circleSegments.processing}`"
                     transform="rotate(-90 100 100)"/>
                   <text x="100" y="90" text-anchor="middle" class="donut-center-label">{{ t('dashboard.orderHealth.total') }}</text>
                   <text x="100" y="120" text-anchor="middle" class="donut-center-value">{{ orderHealthMetrics.totalOrders }}</text>
@@ -302,6 +302,7 @@ import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import { formatCurrency } from '../utils/currency'
+import { formatDate as formatDateUtil } from '../utils/date'
 import ProductDetailModal from '../components/ProductDetailModal.vue'
 import BacklogDetailModal from '../components/BacklogDetailModal.vue'
 import PurchaseOrderModal from '../components/PurchaseOrderModal.vue'
@@ -314,7 +315,7 @@ export default {
     PurchaseOrderModal,
   },
   setup() {
-    const { t, currentCurrency, translateProductName, translateWarehouse } = useI18n()
+    const { t, currentCurrency, translateProductName, translateWarehouse, currentLocale, translateCategory } = useI18n()
     const loading = ref(true)
     const error = ref(null)
     const summary = ref({})
@@ -593,25 +594,20 @@ export default {
              statusData.value.processing + statusData.value.backordered
     })
 
-    const getCircleSegment = (value) => {
-      return totalOrders.value > 0 ? (value / totalOrders.value) * 440 : 0
-    }
+    const circleSegments = computed(() => {
+      const seg = (v) => totalOrders.value > 0 ? (v / totalOrders.value) * 440 : 0
+      return {
+        delivered:   seg(statusData.value.delivered),
+        shipped:     seg(statusData.value.shipped),
+        processing:  seg(statusData.value.processing),
+        backordered: seg(statusData.value.backordered),
+      }
+    })
 
     const getStockBadge = (level) => {
       if (level === 'In Stock') return 'success'
       if (level === 'Low Stock') return 'warning'
       return 'danger'
-    }
-
-    const translateCategory = (category) => {
-      const categoryMap = {
-        'Circuit Boards': t('categories.circuitBoards'),
-        'Sensors': t('categories.sensors'),
-        'Actuators': t('categories.actuators'),
-        'Controllers': t('categories.controllers'),
-        'Power Supplies': t('categories.powerSupplies')
-      }
-      return categoryMap[category] || category
     }
 
     const translateStockLevel = (stockLevel) => {
@@ -634,13 +630,7 @@ export default {
       return priorityMap[priority] || priority
     }
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '-'
-      const { currentLocale } = useI18n()
-      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-      const date = new Date(dateString)
-      return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
-    }
+    const formatDate = (dateString) => formatDateUtil(dateString, currentLocale.value)
 
     const showProductDetail = (product) => {
       selectedProduct.value = product
@@ -697,7 +687,7 @@ export default {
       topProducts,
       backlogItems,
       calculatePercentage,
-      getCircleSegment,
+      circleSegments,
       getStockBadge,
       translateCategory,
       translateStockLevel,
