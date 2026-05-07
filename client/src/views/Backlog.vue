@@ -54,7 +54,7 @@
               <tr v-for="item in backlogItems" :key="item.id">
                 <td><strong>{{ item.order_id }}</strong></td>
                 <td><strong>{{ item.item_sku }}</strong></td>
-                <td>{{ item.item_name }}</td>
+                <td>{{ translateProductName(item.item_name) }}</td>
                 <td>{{ item.quantity_needed }}</td>
                 <td>{{ item.quantity_available }}</td>
                 <td>
@@ -69,7 +69,7 @@
                 </td>
                 <td>
                   <span :class="['badge', item.priority]">
-                    {{ item.priority }}
+                    {{ t('priority.' + item.priority) }}
                   </span>
                 </td>
               </tr>
@@ -90,7 +90,7 @@ import { useI18n } from '../composables/useI18n'
 export default {
   name: 'Backlog',
   setup() {
-    const { t } = useI18n()
+    const { t, translateProductName } = useI18n()
     const loading = ref(true)
     const error = ref(null)
     const allBacklogItems = ref([])
@@ -133,7 +133,7 @@ export default {
         allBacklogItems.value = backlogData
         inventoryItems.value = inventoryData
       } catch (err) {
-        error.value = 'Failed to load backlog: ' + err.message
+        error.value = t('common.error') + ': ' + err.message
       } finally {
         loading.value = false
       }
@@ -148,6 +148,7 @@ export default {
 
     return {
       t,
+      translateProductName,
       loading,
       error,
       backlogItems,
