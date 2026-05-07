@@ -8,6 +8,41 @@
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
+      <div v-if="restockingOrders.length > 0" class="card restocking-section">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('restocking.submittedOrders.title') }}</h3>
+          <span class="badge info">{{ t('restocking.submittedOrders.leadTime') }}</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('restocking.submittedOrders.orderNumber') }}</th>
+                <th>{{ t('restocking.submittedOrders.items') }}</th>
+                <th>{{ t('restocking.submittedOrders.status') }}</th>
+                <th>{{ t('restocking.submittedOrders.submittedDate') }}</th>
+                <th>{{ t('restocking.submittedOrders.expectedDelivery') }}</th>
+                <th>{{ t('restocking.submittedOrders.totalCost') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in restockingOrders" :key="order.id">
+                <td><strong>{{ order.order_number }}</strong></td>
+                <td>
+                  <div v-for="item in order.items" :key="item.sku" class="restocking-item-line">
+                    {{ item.name }} &times; {{ item.quantity.toLocaleString() }}
+                  </div>
+                </td>
+                <td><span class="badge info">{{ order.status }}</span></td>
+                <td>{{ formatDate(order.submitted_date) }}</td>
+                <td>{{ formatDate(order.expected_delivery) }}</td>
+                <td><strong>${{ order.total_cost.toLocaleString() }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
@@ -95,6 +130,7 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const restockingOrders = ref([])
 
     // Use shared filters
     const {
@@ -153,13 +189,22 @@ export default {
       })
     }
 
-    onMounted(loadOrders)
+    const loadRestockingOrders = async () => {
+      try {
+        restockingOrders.value = await api.getRestockingOrders()
+      } catch (err) {
+        // silently ignore — restocking section just won't show
+      }
+    }
+
+    onMounted(() => { loadOrders(); loadRestockingOrders() })
 
     return {
       t,
       loading,
       error,
       orders,
+      restockingOrders,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
@@ -275,5 +320,15 @@ export default {
 .item-meta {
   font-size: 0.813rem;
   color: #64748b;
+}
+
+.restocking-section {
+  border-left: 3px solid #2563eb;
+}
+
+.restocking-item-line {
+  font-size: 0.813rem;
+  color: #475569;
+  line-height: 1.6;
 }
 </style>
